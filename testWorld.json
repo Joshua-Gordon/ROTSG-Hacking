@@ -1,0 +1,11 @@
+{
+    "timestamp" : "3.14159",
+    "tiles" : [["grass0.png","grass0.png","grass0.png"],
+                ["grass0.png","dirt0.png","dirt0.png"],
+                ["grass0.png","grass0.png","grass0.png"]],   
+    "players" : [{
+        "sprite" : "Ranger0.png",
+        "x" : 2,
+        "y" : 2
+    }]
+}
