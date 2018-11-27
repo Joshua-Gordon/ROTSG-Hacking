@@ -1,0 +1,9 @@
+{
+    "files" : [
+        "static/demo.ts",
+        "static/world.ts"
+    ],
+    "compilerOptions" : {
+        "target" : "es2015"
+    }
+}
