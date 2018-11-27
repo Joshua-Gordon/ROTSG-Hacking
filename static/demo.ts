@@ -169,6 +169,7 @@ function drawWorld(world : World) {
 
 let PLAYER_SPEED = 10
 function handleUserInput(keyEvent : KeyboardEvent) {
+  keyEvent.preventDefault()
   const key = keyEvent.key
   if (key === 'ArrowUp') {
     dWorld[player.sprite + '-y'] -= 1
