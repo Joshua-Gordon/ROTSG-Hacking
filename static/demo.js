@@ -98,8 +98,6 @@ Loop because javascript doesn't have tco :(
 */
 function gameLoop(world) {
     return __awaiter(this, void 0, void 0, function* () {
-        canvas = document.getElementById('canvas');
-        canvas.focus();
         console.log(assets);
         // Javascript is pass by copy of reference for objects, so no sneaky pointers with the
         // handle input function. We have to use the global variable.
