@@ -42,4 +42,9 @@ app.get("/assets/:fname", function(req,res) {
     console.log("Send asset " + fname);
 })
 
+app.post("/tick", function(req,res) {
+    console.log(req.body);
+    res.send(JSON.stringify({})); //temporary
+})
+
 app.listen(8000, () => console.log("Running on port 8000!"));

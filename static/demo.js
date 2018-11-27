@@ -16,7 +16,9 @@ pile of hot garbage of an idea.
 */
 var assets = {};
 //this really should be a Map, but typescript does not support ES6 Maps as of the writing of this comment
-var player = {};
+var player = {}; //the user's player
+var gameWorld = {}; //the world to draw
+var dWorld = {}; //the local changes the user makes to the global world each tick
 /*
 This function is called as window.onload
 Its purpose is to connect to the server for the first time and begin the process of
@@ -97,15 +99,26 @@ Loop because javascript doesn't have tco :(
 function gameLoop(world) {
     return __awaiter(this, void 0, void 0, function* () {
         console.log(assets);
+        //Javascript is pass by copy of reference for objects, so no sneaky pointers with the
+        //handle input function. We have to use the global variable.
+        document.addEventListener("keydown", handleUserInput, false);
+        gameWorld = world;
         while (true) {
-            //take player input
-            //update local world
+            //player input is handled asynchronously
             //send local world changes to server
-            //get world changes back from server
-            //apply server changes
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = () => {
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                    //get world changes back from server
+                    //apply server changes
+                    var realDelta = JSON.parse(xhr.responseText);
+                    applyChanges(realDelta);
+                }
+            };
+            xhr.open("POST", "/tick");
+            xhr.send(JSON.stringify(dWorld));
             //draw
-            drawWorld(world);
-            yield setTimeout(() => 0, 500);
+            drawWorld(gameWorld);
             console.log("Draw world");
             break;
         }
@@ -141,6 +154,41 @@ function drawWorld(world) {
         var p = world.players[i];
         if (Math.abs(p.x - centerx) < SIGHT_RADIUS * TILE_SIZE && Math.abs(p.y - centery) < SIGHT_RADIUS * TILE_SIZE) {
             ctx.drawImage(assets[p.sprite], p.x, p.y);
+        }
+    }
+}
+var PLAYER_SPEED = 10;
+function handleUserInput(keyEvent) {
+    var key = keyEvent.key;
+    if (key == "ArrowUp") {
+        dWorld["up"] += 1;
+        player.y -= PLAYER_SPEED;
+    }
+    if (key == "ArrowDown") {
+        dWorld["down"] += 1;
+        player.y += PLAYER_SPEED;
+    }
+    if (key == "ArrowLeft") {
+        dWorld["left"] += 1;
+        player.x -= PLAYER_SPEED;
+    }
+    if (key == "ArrowRight") {
+        dWorld["right"] += 1;
+        player.x += PLAYER_SPEED;
+    }
+}
+function applyChanges(changes) {
+    /*
+    Changes is an object with a field for each object that could be changed, referenced by it's
+    name. In the future, use numeric IDs for all changeable things in the game
+
+    Currently, changes contains x and y updates for all players
+    */
+    for (var i = 0; i < gameWorld.players.length; ++i) {
+        var sprite = gameWorld.players[i].sprite;
+        if (changes.hasOwnProperty(sprite)) {
+            gameWorld.players[i].x += changes[sprite].x;
+            gameWorld.players[i].y += changes[sprite].y;
         }
     }
 }
@@ -228,5 +276,6 @@ function loadPlayers(playerslist) {
                 players.push(player);
             });
         }
+        gameWorld.players = players;
     });
 }
