@@ -20,7 +20,7 @@ This function is called as window.onload
 Its purpose is to connect to the server for the first time and begin the process of
 retrieving the initial world state.
 */
-function startUp (): void {
+function startUp() : void {
   canvas = document.getElementById('canvas') as HTMLCanvasElement
   const ctx = canvas.getContext('2d')
   ctx.canvas.width = window.innerWidth
@@ -48,7 +48,7 @@ function startUp (): void {
   xhr.send(null)
 }
 
-async function loadAssets (data: string) {
+async function loadAssets(data : string) {
   console.log(data)
   const components = data.split(',')
 
@@ -94,7 +94,7 @@ async function loadAssets (data: string) {
 This is where the action happens. The game is in motion, and the player is modifying the shared world.
 Loop because javascript doesn't have tco :(
 */
-async function gameLoop (world: World) {
+async function gameLoop(world : World) {
   console.log(assets)
 
     // Javascript is pass by copy of reference for objects, so no sneaky pointers with the
@@ -105,7 +105,7 @@ async function gameLoop (world: World) {
   while (true) {
         // player input is handled asynchronously
 
-    await new Promise(function (resolve, reject) {
+    await new Promise(function(resolve, reject) {
         // send local world changes to server
       const xhr = new XMLHttpRequest()
       xhr.onreadystatechange = () => {
@@ -135,7 +135,7 @@ async function gameLoop (world: World) {
 let TILE_SIZE = 64
 let SIGHT_RADIUS = 15
 
-function drawWorld (world: World) {
+function drawWorld(world : World) {
   const ctx = canvas.getContext('2d')
     // get player location, and draw tiles within sight radius (L-infinity) around it
   const centerx = Math.round(player.x / TILE_SIZE)
@@ -168,7 +168,7 @@ function drawWorld (world: World) {
 }
 
 let PLAYER_SPEED = 10
-function handleUserInput (keyEvent: KeyboardEvent) {
+function handleUserInput(keyEvent : KeyboardEvent) {
   const key = keyEvent.key
   if (key === 'ArrowUp') {
     dWorld[player.sprite + '-y'] -= 1
@@ -188,7 +188,7 @@ function handleUserInput (keyEvent: KeyboardEvent) {
   }
 }
 
-function applyChanges (changes) {
+function applyChanges(changes) {
     /*
     Changes is an object with a field for each object that could be changed, referenced by it's
     name. In the future, use numeric IDs for all changeable things in the game
@@ -214,14 +214,14 @@ function applyChanges (changes) {
   }
 }
 
-async function loadUser (userlist: string[]) {
+async function loadUser(userlist : string[]) {
   const fname = userlist[0]
   const x = userlist[1]
   const y = userlist[2]
   player.sprite = fname
   player.x = +x
   player.y = +y
-  return new Promise(function (resolve, reject) {
+  return new Promise(function(resolve, reject) {
     const xhr = new XMLHttpRequest()
     xhr.onreadystatechange = () => {
       if (xhr.readyState === 4 && xhr.status === 200) {
@@ -237,11 +237,11 @@ async function loadUser (userlist: string[]) {
   })
 }
 
-async function loadTiles (tilenames: string[]) {
+async function loadTiles(tilenames : string[]) {
   console.log('Tilenames: ' + tilenames)
   for (let i = 0; i < tilenames.length; ++i) {
     console.log('Begin loop: ' + i)
-    await new Promise(function (resolve, reject) {
+    await new Promise(function(resolve, reject) {
       const fname = tilenames[i] // grab the next tile name
       const xhr = new XMLHttpRequest()
       xhr.onreadystatechange = () => {
@@ -262,12 +262,12 @@ async function loadTiles (tilenames: string[]) {
   }
 }
 
-async function loadPlayers (playerslist: string[]) {
+async function loadPlayers(playerslist : string[]) {
   console.log(playerslist)
   const players = [] as Player[]
   const len = playerslist.length
   for (let i = 0; i < len / 3; ++i) {
-    await new Promise(function (resolve, reject) {
+    await new Promise(function(resolve, reject) {
       const fname = playerslist.shift()
       const x = +playerslist.shift() as number
       const y = +playerslist.shift() as number
