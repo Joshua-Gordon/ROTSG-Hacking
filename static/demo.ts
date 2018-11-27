@@ -105,6 +105,8 @@ async function gameLoop(world : World) {
     while(true){
         //player input is handled asynchronously
 
+        
+        await new Promise(function(resolve,reject) {
         //send local world changes to server
         var xhr = new XMLHttpRequest();
         xhr.onreadystatechange = () => {
@@ -115,13 +117,19 @@ async function gameLoop(world : World) {
                 applyChanges(realDelta);
             }
         }
-        xhr.open("POST","/tick");
-        xhr.send(JSON.stringify(dWorld));
+        xhr.onload = resolve;
+        dWorld["timestamp"] = new Date().getTime();
+        xhr.open("GET","/tick?data="+JSON.stringify(dWorld));
+        xhr.setRequestHeader("Content-Type", "application/json");
+        console.log("dworld: " + JSON.stringify(dWorld));
+        xhr.send();
+        console.log("Sent tick request");
+        setTimeout(reject,20*1000);
+        });
 
         //draw
         drawWorld(gameWorld);
         console.log("Draw world");
-        break;
     }
 }
 
@@ -165,19 +173,19 @@ var PLAYER_SPEED = 10;
 function handleUserInput(keyEvent : KeyboardEvent) {
     var key = keyEvent.key;
     if(key == "ArrowUp") {
-        dWorld["up"] += 1;
+        dWorld[player.sprite + "-y"] -= 1;
         player.y -= PLAYER_SPEED;
     }
     if(key == "ArrowDown") {
-        dWorld["down"] += 1;
+        dWorld[player.sprite + "-y"] += 1;
         player.y += PLAYER_SPEED;
     }
     if(key == "ArrowLeft") {
-        dWorld["left"] += 1;
+        dWorld[player.sprite + "-x"] -= 1;
         player.x -= PLAYER_SPEED;
     }
     if(key == "ArrowRight") {
-        dWorld["right"] += 1;
+        dWorld[player.sprite + "-x"] += 1;
         player.x += PLAYER_SPEED;
     }
 }
@@ -189,11 +197,21 @@ function applyChanges(changes) {
 
     Currently, changes contains x and y updates for all players
     */
+   /*
     for(var i = 0; i < gameWorld.players.length; ++i) {
         var sprite = gameWorld.players[i].sprite;
         if(changes.hasOwnProperty(sprite)) {
             gameWorld.players[i].x += changes[sprite].x;
             gameWorld.players[i].y += changes[sprite].y;
+        }
+    }
+    */
+
+    for(var key in Object.keys(changes)) {
+        if(gameWorld[key]) {
+            gameWorld[key] += changes[key];
+        } else {
+            gameWorld[key] = changes[key];
         }
     }
 }
