@@ -1,5 +1,88 @@
 window.onload = startUp
 
+let gamepadAPI = {
+  controller: {},
+  connect: function(e) {
+    gamepadAPI.controller = e.gamepad
+    console.log('Gamepad connected.')
+  },
+  disconnect: function(e) {
+    delete gamepadAPI.controller
+    console.log('Gamepad disconnected.')
+  },
+  update: function() {
+    // clear the buttons cache
+    gamepadAPI.buttonsCache = []
+    // move the buttons status from previous fram to the cache
+    for (let i = 0; i < gamepadAPI.buttonsStatus.length; i++) {
+      gamepadAPI.buttonsCache[i] = gamepadAPI.buttonsStatus[i]
+    }
+    // clear the buttons status
+    gamepadAPI.buttonsStatus = []
+    // get the gamepad object
+    let gp = navigator.getGamepads()[0] || { buttons: [], axes: [] }
+
+    // loop through buttons and push the pressed ones to the array
+    let pressed = []
+    if (gp.buttons) {
+      let k = gp.buttons.length
+      for (let i = 0; i < k; i++) {
+        if (gp.buttons[i].pressed) {
+          pressed.push(gamepadAPI.buttons[i])
+        }
+      }
+    }
+    // loop through axes and push their values to the array
+    let axes = []
+    if (gp.axes) {
+      let k = gp.axes.length
+      for (let i = 0; i < k; i++) {
+        axes.push(gp.axes[i].toFixed(2))
+      }
+    }
+    // assign received values
+    gamepadAPI.axesStatus = axes
+    gamepadAPI.buttonsStatus = pressed
+    // return buttons for debugging purposes
+    return pressed
+  },
+  buttonPressed: function(button, hold) {
+    let newPress = false
+    // loop through pressed buttons
+    let k = gamepadAPI.buttonsStatus.length
+    for (let i = 0; i < k; i++) {
+      // if we found the button we're looking for...
+      if (gamepadAPI.buttonsStatus[i] === button) {
+        // set the boolean variable to true
+        newPress = true
+        // if we want to check the single press
+        if (!hold) {
+          // loop through the cached states from the precious frame
+          k = gamepadAPI.buttonsCache.length
+          for (let i = 0; i < k; i++) {
+            // if the button was alread pressed, ignore new press
+            if (gamepadAPI.buttonsCache[i] === button) {
+              newPress = false
+            }
+          }
+        }
+      }
+    }
+    return newPress
+  },
+  buttons: [
+    'DPad-Up','DPad-Down','DPad-Left','DPad-Right',
+    'Start','Back','Axis-Left','Axis-Right',
+    'LB','RB','Power','A','B','X','Y'
+  ],
+  buttonsCache: [],
+  buttonsStatus: [],
+  axesStatus: []
+}
+
+window.addEventListener('gamepadconnected', gamepadAPI.connect)
+window.addEventListener('gamepaddisconnected', gamepadAPI.disconnect)
+
 let canvas
 
 /*
@@ -49,7 +132,7 @@ function startUp() : void {
 }
 
 async function loadAssets(data : string) {
-  console.log(data)
+  // console.log(data)
   const components = data.split(',')
 
     // grab user player
@@ -95,7 +178,7 @@ This is where the action happens. The game is in motion, and the player is modif
 Loop because javascript doesn't have tco :(
 */
 async function gameLoop(world : World) {
-  console.log(assets)
+  // console.log(assets)
 
     // Javascript is pass by copy of reference for objects, so no sneaky pointers with the
     // handle input function. We have to use the global variable.
@@ -103,8 +186,10 @@ async function gameLoop(world : World) {
 
   gameWorld = world
   while (true) {
-        // player input is handled asynchronously
+    let buttonsPressed = gamepadAPI.update()
+    handleControllerInput(buttonsPressed)
 
+    // player input is handled asynchronously
     await new Promise(function(resolve, reject) {
         // send local world changes to server
       const xhr = new XMLHttpRequest()
@@ -120,15 +205,15 @@ async function gameLoop(world : World) {
       dWorld['timestamp'] = new Date().getTime()
       xhr.open('GET', '/tick?data=' + JSON.stringify(dWorld))
       xhr.setRequestHeader('Content-Type', 'application/json')
-      console.log('dworld: ' + JSON.stringify(dWorld))
+      // console.log('dworld: ' + JSON.stringify(dWorld))
       xhr.send()
-      console.log('Sent tick request')
+      // console.log('Sent tick request')
       setTimeout(reject, 20 * 1000)
     })
 
         // draw
     drawWorld(gameWorld)
-    console.log('Draw world')
+    // console.log('Draw world')
   }
 }
 
@@ -164,6 +249,21 @@ function drawWorld(world : World) {
     if (Math.abs(p.x - centerx) < SIGHT_RADIUS * TILE_SIZE && Math.abs(p.y - centery) < SIGHT_RADIUS * TILE_SIZE) {
       ctx.drawImage(assets[p.sprite] as HTMLImageElement, p.x, p.y)
     }
+  }
+}
+
+let MOVE_SPEED = 10
+function handleControllerInput(keyPresses) {
+
+  const buttonPressed = keyPresses[0] || ''
+  console.log(buttonPressed)
+  if (buttonPressed === 'Axis-Left') {
+    dWorld[player.sprite + '-x'] -= 1
+    player.x -= MOVE_SPEED
+  }
+  if (buttonPressed === 'Axis-Right') {
+    dWorld[player.sprite + '-x'] += 1
+    player.x += MOVE_SPEED
   }
 }
 
@@ -239,9 +339,9 @@ async function loadUser(userlist : string[]) {
 }
 
 async function loadTiles(tilenames : string[]) {
-  console.log('Tilenames: ' + tilenames)
+  // console.log('Tilenames: ' + tilenames)
   for (let i = 0; i < tilenames.length; ++i) {
-    console.log('Begin loop: ' + i)
+    // console.log('Begin loop: ' + i)
     await new Promise(function(resolve, reject) {
       const fname = tilenames[i] // grab the next tile name
       const xhr = new XMLHttpRequest()
@@ -251,20 +351,20 @@ async function loadTiles(tilenames : string[]) {
           const im = new Image()
           im.src = 'data:image/png;base64,' + data // build the tile image
           assets[fname] = im // add the tile to the assets object
-          console.log('Loaded tile ' + fname)
+          // console.log('Loaded tile ' + fname)
         }
       }
       xhr.onload = resolve
-      console.log('Grabbing tile ' + fname)
+      // console.log('Grabbing tile ' + fname)
       xhr.open('GET', '/assets/' + fname)
       xhr.send(null)
     })
-    console.log('Loop: ' + i)
+    // console.log('Loop: ' + i)
   }
 }
 
 async function loadPlayers(playerslist : string[]) {
-  console.log(playerslist)
+  // console.log(playerslist)
   const players = [] as Player[]
   const len = playerslist.length
   for (let i = 0; i < len / 3; ++i) {
@@ -280,11 +380,11 @@ async function loadPlayers(playerslist : string[]) {
           const im = new Image()
           im.src = 'data:image/png;base64,' + data // build the player sprite image
           assets[fname] = im // add the player sprite to the assets object
-          console.log('Loaded sprite ' + fname)
+          // console.log('Loaded sprite ' + fname)
         }
       }
       xhr.onload = resolve
-      console.log('Grabbing sprite ' + fname)
+      // console.log('Grabbing sprite ' + fname)
       xhr.open('GET', '/assets/' + fname)
       xhr.send(null)
             // end copy+paste

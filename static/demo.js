@@ -7,6 +7,86 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 window.onload = startUp;
+let gamepadAPI = {
+    controller: {},
+    connect: function (e) {
+        gamepadAPI.controller = e.gamepad;
+        console.log('Gamepad connected.');
+    },
+    disconnect: function (e) {
+        delete gamepadAPI.controller;
+        console.log('Gamepad disconnected.');
+    },
+    update: function () {
+        // clear the buttons cache
+        gamepadAPI.buttonsCache = [];
+        // move the buttons status from previous fram to the cache
+        for (let i = 0; i < gamepadAPI.buttonsStatus.length; i++) {
+            gamepadAPI.buttonsCache[i] = gamepadAPI.buttonsStatus[i];
+        }
+        // clear the buttons status
+        gamepadAPI.buttonsStatus = [];
+        // get the gamepad object
+        let gp = navigator.getGamepads()[0] || { buttons: [], axes: [] };
+        // loop through buttons and push the pressed ones to the array
+        let pressed = [];
+        if (gp.buttons) {
+            let k = gp.buttons.length;
+            for (let i = 0; i < k; i++) {
+                if (gp.buttons[i].pressed) {
+                    pressed.push(gamepadAPI.buttons[i]);
+                }
+            }
+        }
+        // loop through axes and push their values to the array
+        let axes = [];
+        if (gp.axes) {
+            let k = gp.axes.length;
+            for (let i = 0; i < k; i++) {
+                axes.push(gp.axes[i].toFixed(2));
+            }
+        }
+        // assign received values
+        gamepadAPI.axesStatus = axes;
+        gamepadAPI.buttonsStatus = pressed;
+        // return buttons for debugging purposes
+        return pressed;
+    },
+    buttonPressed: function (button, hold) {
+        let newPress = false;
+        // loop through pressed buttons
+        let k = gamepadAPI.buttonsStatus.length;
+        for (let i = 0; i < k; i++) {
+            // if we found the button we're looking for...
+            if (gamepadAPI.buttonsStatus[i] === button) {
+                // set the boolean variable to true
+                newPress = true;
+                // if we want to check the single press
+                if (!hold) {
+                    // loop through the cached states from the precious frame
+                    k = gamepadAPI.buttonsCache.length;
+                    for (let i = 0; i < k; i++) {
+                        // if the button was alread pressed, ignore new press
+                        if (gamepadAPI.buttonsCache[i] === button) {
+                            newPress = false;
+                        }
+                    }
+                }
+            }
+        }
+        return newPress;
+    },
+    buttons: [
+        'DPad-Up', 'DPad-Down', 'DPad-Left', 'DPad-Right',
+        'Start', 'Back', 'Axis-Left', 'Axis-Right',
+        'LB', 'RB', 'Power', 'A', 'B', 'X', 'Y'
+    ],
+    buttonsCache: [],
+    buttonsStatus: [],
+    axesStatus: []
+};
+window.addEventListener('gamepadconnected', gamepadAPI.connect);
+window.addEventListener('gamepaddisconnected', gamepadAPI.disconnect);
 let canvas;
 /*
 This object contains all the images used in the current world.
@@ -53,7 +133,7 @@ function startUp() {
 }
 function loadAssets(data) {
     return __awaiter(this, void 0, void 0, function* () {
-        console.log(data);
+        // console.log(data)
         const components = data.split(',');
         // grab user player
         const userlist = [components.shift(), components.shift(), components.shift()];
@@ -98,12 +178,14 @@ Loop because javascript doesn't have tco :(
 */
 function gameLoop(world) {
     return __awaiter(this, void 0, void 0, function* () {
-        console.log(assets);
+        // console.log(assets)
         // Javascript is pass by copy of reference for objects, so no sneaky pointers with the
         // handle input function. We have to use the global variable.
         document.addEventListener('keydown', handleUserInput, false);
         gameWorld = world;
         while (true) {
+            let buttonsPressed = gamepadAPI.update();
+            handleControllerInput(buttonsPressed);
             // player input is handled asynchronously
             yield new Promise(function (resolve, reject) {
                 // send local world changes to server
@@ -120,14 +202,14 @@ function gameLoop(world) {
                 dWorld['timestamp'] = new Date().getTime();
                 xhr.open('GET', '/tick?data=' + JSON.stringify(dWorld));
                 xhr.setRequestHeader('Content-Type', 'application/json');
-                console.log('dworld: ' + JSON.stringify(dWorld));
+                // console.log('dworld: ' + JSON.stringify(dWorld))
                 xhr.send();
-                console.log('Sent tick request');
+                // console.log('Sent tick request')
                 setTimeout(reject, 20 * 1000);
             });
             // draw
             drawWorld(gameWorld);
-            console.log('Draw world');
+            // console.log('Draw world')
         }
     });
 }
@@ -162,6 +244,19 @@ function drawWorld(world) {
         if (Math.abs(p.x - centerx) < SIGHT_RADIUS * TILE_SIZE && Math.abs(p.y - centery) < SIGHT_RADIUS * TILE_SIZE) {
             ctx.drawImage(assets[p.sprite], p.x, p.y);
         }
+    }
+}
+let MOVE_SPEED = 1;
+function handleControllerInput(keyPresses) {
+    const buttonPressed = keyPresses[0] || '';
+    console.log(buttonPressed);
+    if (buttonPressed === 'Axis-Left') {
+        dWorld[player.sprite + '-x'] -= 1;
+        player.x -= MOVE_SPEED;
+    }
+    if (buttonPressed === 'Axis-Right') {
+        dWorld[player.sprite + '-x'] += 1;
+        player.x += MOVE_SPEED;
     }
 }
 let PLAYER_SPEED = 10;
@@ -236,9 +331,9 @@ function loadUser(userlist) {
 }
 function loadTiles(tilenames) {
     return __awaiter(this, void 0, void 0, function* () {
-        console.log('Tilenames: ' + tilenames);
+        // console.log('Tilenames: ' + tilenames)
         for (let i = 0; i < tilenames.length; ++i) {
-            console.log('Begin loop: ' + i);
+            // console.log('Begin loop: ' + i)
             yield new Promise(function (resolve, reject) {
                 const fname = tilenames[i]; // grab the next tile name
                 const xhr = new XMLHttpRequest();
@@ -248,21 +343,21 @@ function loadTiles(tilenames) {
                         const im = new Image();
                         im.src = 'data:image/png;base64,' + data; // build the tile image
                         assets[fname] = im; // add the tile to the assets object
-                        console.log('Loaded tile ' + fname);
+                        // console.log('Loaded tile ' + fname)
                     }
                 };
                 xhr.onload = resolve;
-                console.log('Grabbing tile ' + fname);
+                // console.log('Grabbing tile ' + fname)
                 xhr.open('GET', '/assets/' + fname);
                 xhr.send(null);
             });
-            console.log('Loop: ' + i);
+            // console.log('Loop: ' + i)
         }
     });
 }
 function loadPlayers(playerslist) {
     return __awaiter(this, void 0, void 0, function* () {
-        console.log(playerslist);
+        // console.log(playerslist)
         const players = [];
         const len = playerslist.length;
         for (let i = 0; i < len / 3; ++i) {
@@ -278,11 +373,11 @@ function loadPlayers(playerslist) {
                         const im = new Image();
                         im.src = 'data:image/png;base64,' + data; // build the player sprite image
                         assets[fname] = im; // add the player sprite to the assets object
-                        console.log('Loaded sprite ' + fname);
+                        // console.log('Loaded sprite ' + fname)
                     }
                 };
                 xhr.onload = resolve;
-                console.log('Grabbing sprite ' + fname);
+                // console.log('Grabbing sprite ' + fname)
                 xhr.open('GET', '/assets/' + fname);
                 xhr.send(null);
                 // end copy+paste
