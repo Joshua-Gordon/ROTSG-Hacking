@@ -44,6 +44,7 @@ let gamepadAPI = {
     gamepadAPI.axesStatus = axes
     gamepadAPI.buttonsStatus = pressed
     // return buttons for debugging purposes
+    // return axes
     return pressed
   },
   buttonPressed: function(button, hold) {
@@ -253,6 +254,22 @@ function drawWorld(world : World) {
 }
 
 let MOVE_SPEED = 10
+/*
+NOTE: IF THE BUTTON FUNCTIONALITY DOESN'T SEEM INTUITIVE PLS CHANGE
+
+Button  | Functionality
+---------------------------------------------
+A       | Toggles the fire weapon mode
+LB      |
+RB      |
+        |
+Axis    | Functionality
+---------------------------------------------
+Left    | Moves towards the direction the user moves the left thumbstick in
+Right   | Moves the cursor/weapon pointer in the direction the user moves the right thumbstick in
+        |
+
+*/
 function handleControllerInput(keyPresses) {
 
   const buttonPressed = keyPresses[0] || ''
